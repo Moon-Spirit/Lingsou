@@ -1,0 +1,3 @@
+[submodule "search-engine-tool"]
+	path = search-engine-tool
+	url = https://github.com/Moon-Spirit/search-engine-tool.git
