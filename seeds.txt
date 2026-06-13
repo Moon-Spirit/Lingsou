@@ -1,0 +1,14 @@
+# Lingsou default seed list - public Chinese sites suitable for crawling
+# Each URL is a starting point for BFS expansion
+https://www.infoq.cn/
+https://36kr.com/
+https://www.oschina.net/
+https://segmentfault.com/
+https://juejin.cn/
+https://www.cnblogs.com/
+https://www.ithome.com/
+https://www.51cto.com/
+https://www.imooc.com/
+https://developer.mozilla.org/zh-CN/
+https://news.ycombinator.com/
+https://www.smashingmagazine.com/
