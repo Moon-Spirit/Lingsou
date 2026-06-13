@@ -9,7 +9,7 @@
     "dev:api": "tsx watch src/api/server.ts",
     "dev:web": "npm --prefix web run dev",
     "dev:crawl": "tsx scripts/crawl.ts",
-    "dev": "concurrently -k -n meili,api,web -c blue,green,magenta \"npm:dev:meili\" \"npm:dev:api\" \"npm:dev:web\"",
+    "dev": "bash scripts/dev.sh",
     "start": "node dist/api/server.js",
     "build": "tsc && npm --prefix web run build",
     "crawl": "tsx scripts/crawl.ts",
