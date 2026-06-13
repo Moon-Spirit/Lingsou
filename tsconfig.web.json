@@ -4,7 +4,11 @@
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
-    "types": []
+    "types": [],
+    "rootDir": ".",
+    "declaration": false,
+    "sourceMap": true
   },
-  "include": ["web/src/**/*", "src/types/**/*"]
+  "include": ["web/src/**/*", "src/types/**/*"],
+  "exclude": ["node_modules", "dist", "tests"]
 }
