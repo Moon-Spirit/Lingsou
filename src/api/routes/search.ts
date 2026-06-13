@@ -1,8 +1,9 @@
 import type { FastifyInstance } from 'fastify';
 import { SearchQuerySchema, SuggestQuerySchema } from '../schemas.js';
-import { createClient, search, suggest } from '../../meili/index.js';
+import { createClient, suggest } from '../../meili/index.js';
+import { searchWithFallback, type FallbackSearchResponse } from '../../serp/index.js';
 import { config } from '../../config.js';
-import type { SearchResponse, SuggestResponse } from '../../types/index.js';
+import type { SuggestResponse } from '../../types/index.js';
 
 interface HealthOk {
   status: 'ok';
@@ -41,11 +42,13 @@ export async function searchRoutes(app: FastifyInstance): Promise<void> {
         },
       },
     },
-    async (req): Promise<SearchResponse> => {
+    async (req): Promise<FallbackSearchResponse> => {
       const parsed = SearchQuerySchema.parse(req.query);
-      return search(client, config.meiliIndex, parsed.q, {
+      return searchWithFallback(parsed.q, {
         limit: parsed.limit,
         offset: parsed.offset,
+        serpEngine: config.serpBackend,
+        serpIndexOnFetch: config.serpIndexOnFetch,
       });
     }
   );

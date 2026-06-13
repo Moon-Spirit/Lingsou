@@ -13,6 +13,11 @@ const ConfigSchema = z.object({
   CRAWL_CONCURRENCY: z.coerce.number().int().positive().default(3),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
   PORT: z.coerce.number().int().positive().default(3001),
+  // SERP fallback layer (opt-in). `'none'` keeps the local-only behavior.
+  SERP_BACKEND: z.enum(['none', 'duckduckgo', 'bing']).default('none'),
+  // When true, SERP results fetched as fallback are pushed back into Meilisearch
+  // so future identical queries resolve locally.
+  SERP_INDEX_ON_FETCH: z.coerce.boolean().default(false),
 });
 
 export type EnvInput = Record<string, string | undefined>;
@@ -30,6 +35,8 @@ export function loadConfig(env: EnvInput = process.env): AppConfig {
     crawlConcurrency: parsed.CRAWL_CONCURRENCY,
     logLevel: parsed.LOG_LEVEL,
     port: parsed.PORT,
+    serpBackend: parsed.SERP_BACKEND,
+    serpIndexOnFetch: parsed.SERP_INDEX_ON_FETCH,
   };
 }
 

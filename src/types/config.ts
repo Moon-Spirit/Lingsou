@@ -9,4 +9,8 @@ export interface AppConfig {
   crawlConcurrency: number;
   logLevel: string;
   port: number;
+  /** Opt-in SERP engine. `'none'` (default) disables any external fallback. */
+  serpBackend: 'none' | 'duckduckgo' | 'bing';
+  /** When true, SERP fallback hits are written back into the Meilisearch index. */
+  serpIndexOnFetch: boolean;
 }
