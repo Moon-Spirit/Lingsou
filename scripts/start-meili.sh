@@ -21,16 +21,44 @@ MASTER_KEY="lingsou-dev-key"
 VERSION="v1.10.0"
 BIN_PATH="$BIN_DIR/meilisearch"
 
-# Check if already running
+# Check if already running — two layers:
+#   1. PID file (our own previous launch)
+#   2. port 7700 health check (a meili launched MANUALLY by the user on a
+#      different --db-path would not match our PID file but would still bind
+#      7700 and cause our start to fail with EADDRINUSE)
 EXISTING_PID=""
 if [[ -f "$PID_FILE" ]]; then
     EXISTING_PID=$(cat "$PID_FILE")
     if kill -0 "$EXISTING_PID" 2>/dev/null; then
-        echo "Meilisearch is already running (PID: $EXISTING_PID)"
+        echo "Meilisearch is already running (PID: $EXISTING_PID, managed by us)"
         echo "To stop: bash scripts/stop-meili.sh"
     else
         rm -f "$PID_FILE"
         EXISTING_PID=""
+    fi
+fi
+
+# Port-7700 fallback: if we don't have a PID but the port answers /health,
+# there's an externally-launched meili (e.g. user ran `meilisearch` directly
+# with a custom --db-path). Adopt it instead of trying to spawn a second one.
+#
+# IMPORTANT: do NOT write the adopted PID to $PID_FILE. The PID file is the
+# "managed by us" marker for stop-meili.sh — overwriting it would cause
+# `bash scripts/stop-meili.sh` to kill a process the user launched themselves,
+# which is not our place to do.
+if [[ -z "$EXISTING_PID" ]]; then
+    HEALTH_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 1 http://127.0.0.1:7700/health 2>/dev/null || echo "000")
+    if [[ "$HEALTH_CODE" == "200" ]]; then
+        # Find the PID owning port 7700 via /proc (no lsof/fuser dep).
+        EXTERNAL_PID=$(ss -ltnp 'sport = :7700' 2>/dev/null | sed -n 's/.*pid=\([0-9]*\),.*/\1/p' | head -n1)
+        if [[ -z "$EXTERNAL_PID" ]] && command -v fuser >/dev/null 2>&1; then
+            EXTERNAL_PID=$(fuser 7700/tcp 2>/dev/null | awk '{print $1}')
+        fi
+        if [[ -n "$EXTERNAL_PID" ]] && kill -0 "$EXTERNAL_PID" 2>/dev/null; then
+            EXISTING_PID="$EXTERNAL_PID"
+            echo "[meili] found externally-launched meilisearch on :7700 (PID: $EXTERNAL_PID), adopting it"
+            echo "[meili] (it may use a different --db-path; data won't land in $DATA_DIR)"
+        fi
     fi
 fi
 
