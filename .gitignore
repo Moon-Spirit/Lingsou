@@ -1,0 +1,34 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Meilisearch data
+data/
+
+# Test results
+test-results/
+playwright-report/
+playwright/test-results/
+
+# Vitest cache
+.vitest-cache/
+
+# OpenCode evidence
+.omo/evidence/
+
+# Logs
+*.log
+
+# macOS
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
