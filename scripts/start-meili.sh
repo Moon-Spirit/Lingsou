@@ -22,14 +22,15 @@ VERSION="v1.10.0"
 BIN_PATH="$BIN_DIR/meilisearch"
 
 # Check if already running
+EXISTING_PID=""
 if [[ -f "$PID_FILE" ]]; then
-    PID=$(cat "$PID_FILE")
-    if kill -0 "$PID" 2>/dev/null; then
-        echo "Meilisearch is already running (PID: $PID)"
+    EXISTING_PID=$(cat "$PID_FILE")
+    if kill -0 "$EXISTING_PID" 2>/dev/null; then
+        echo "Meilisearch is already running (PID: $EXISTING_PID)"
         echo "To stop: bash scripts/stop-meili.sh"
-        exit 0
     else
         rm -f "$PID_FILE"
+        EXISTING_PID=""
     fi
 fi
 
@@ -46,35 +47,55 @@ if [[ ! -f "$BIN_PATH" ]]; then
     echo "Binary downloaded successfully"
 fi
 
-# Start Meilisearch in background
-echo "Starting Meilisearch..."
-nohup "$BIN_PATH" \
-    --master-key "$MASTER_KEY" \
-    --db-path "$DATA_DIR" \
-    --http-addr "127.0.0.1:7700" \
-    --env "development" \
-    > "$LOG_FILE" 2>&1 &
+# Only start a fresh meilisearch if one isn't already alive.
+PID=""
+if [[ -z "$EXISTING_PID" ]]; then
+    echo "Starting Meilisearch..."
+    nohup "$BIN_PATH" \
+        --master-key "$MASTER_KEY" \
+        --db-path "$DATA_DIR" \
+        --http-addr "127.0.0.1:7700" \
+        --env "development" \
+        > "$LOG_FILE" 2>&1 &
 
-PID=$!
-echo "$PID" > "$PID_FILE"
-echo "Meilisearch started with PID: $PID"
-echo "Log file: $LOG_FILE"
+    PID=$!
+    echo "$PID" > "$PID_FILE"
+    echo "Meilisearch started with PID: $PID"
+    echo "Log file: $LOG_FILE"
 
-# Wait for startup and health check
-echo "Waiting for Meilisearch to be ready..."
-sleep 3
+    # Wait for startup and health check
+    echo "Waiting for Meilisearch to be ready..."
+    sleep 3
 
-# Health check
-HEALTH_RESPONSE=$(curl -s -w "%{http_code}" -o /dev/null http://localhost:7700/health 2>/dev/null || echo "000")
-if [[ "$HEALTH_RESPONSE" == "200" ]]; then
-    echo ""
-    echo "=========================================="
-    echo "Meilisearch is running on http://localhost:7700"
-    echo "Master Key: $MASTER_KEY"
-    echo "Data Directory: $DATA_DIR"
-    echo "PID File: $PID_FILE"
-    echo "=========================================="
-else
-    echo "Warning: Health check returned status $HEALTH_RESPONSE"
-    echo "Check logs at: $LOG_FILE"
+    # Health check
+    HEALTH_RESPONSE=$(curl -s -w "%{http_code}" -o /dev/null http://localhost:7700/health 2>/dev/null || echo "000")
+    if [[ "$HEALTH_RESPONSE" == "200" ]]; then
+        echo ""
+        echo "=========================================="
+        echo "Meilisearch is running on http://localhost:7700"
+        echo "Master Key: $MASTER_KEY"
+        echo "Data Directory: $DATA_DIR"
+        echo "PID File: $PID_FILE"
+        echo "=========================================="
+    else
+        echo "Warning: Health check returned status $HEALTH_RESPONSE"
+        echo "Check logs at: $LOG_FILE"
+    fi
 fi
+
+# ----------------------------------------------------------------------
+# Block in foreground so `npm run dev` (concurrently) sees a live process.
+# Without this, the script exits after `nohup ... &`, and concurrently
+# interprets that as "meili finished successfully" and SIGTERMs the other
+# children (api, web). Trap signals so we exit cleanly on Ctrl+C / SIGTERM.
+# ----------------------------------------------------------------------
+trap 'echo "[meili] stopping (PID ${PID:-$EXISTING_PID})..."; exit 0' SIGTERM SIGINT
+
+if [[ -n "$PID" ]]; then
+    wait "$PID" 2>/dev/null || true
+elif [[ -n "$EXISTING_PID" ]] && kill -0 "$EXISTING_PID" 2>/dev/null; then
+    echo "[meili] following meilisearch logs (PID $EXISTING_PID). Send SIGTERM to stop."
+    tail --pid="$EXISTING_PID" -n +1 -f "$LOG_FILE" 2>/dev/null || true
+fi
+
+exit 0
