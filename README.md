@@ -228,6 +228,28 @@ A: 项目自带 `scripts/start-meili.sh` 自动下载 aarch64 Linux 二进制并
 ### Q: Playwright 启动失败 `Executable doesn't exist`
 A: 运行 `npm run test:e2e:setup` 安装 Chromium。
 
+## 🔀 SERP Fallback / Aggregate (Optional)
+
+lingsou can scrape public HTML search endpoints when the local index is empty, **or** run multiple engines in parallel and fuse their results. **OFF by default** — scraping may violate those engines' ToS.
+
+```bash
+# 1) Single-engine fallback — only when local returns 0 hits (legacy)
+export SERP_BACKEND=duckduckgo            # or 'bing'
+export SERP_MODE=fallback
+npm run dev
+
+# 2) Multi-engine aggregate — always query local + SERP, dedupe, re-rank
+export SERP_MODE=aggregate
+export SERP_ENGINES=duckduckgo,bing       # comma-separated
+npm run dev
+
+# Optional: write SERP hits back into the local index so future queries
+# of the same terms hit Meilisearch instead of being re-scraped.
+export SERP_INDEX_ON_FETCH=true
+```
+
+Response shape gains `serpSources` (per-engine hit counts in the final result) when SERP contributes. Internally the aggregator exposes per-hit `engines` and `consensus` (how many engines returned the same URL). See `src/serp/fusion.ts` for the merge algorithm.
+
 ## 📊 性能数据
 
 - 爬取 1 个种子 (infoq.cn 1 页)：~3s

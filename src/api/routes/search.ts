@@ -48,6 +48,8 @@ export async function searchRoutes(app: FastifyInstance): Promise<void> {
         limit: parsed.limit,
         offset: parsed.offset,
         serpEngine: config.serpBackend,
+        serpEngines: config.serpEngines,
+        serpMode: config.serpMode,
         serpIndexOnFetch: config.serpIndexOnFetch,
       });
     }
