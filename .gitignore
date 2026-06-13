@@ -32,3 +32,8 @@ playwright/test-results/
 # IDE
 .vscode/
 .idea/
+
+# Wave 1 local artifacts
+.bin/
+data/
+coverage/
